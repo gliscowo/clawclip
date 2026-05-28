@@ -1,6 +1,6 @@
 name: clawclip
 description: A low-level GLFW/OpenGL abstraction for building basic rendering pipelines
-version: 0.1.0
+version: 0.1.1
 repository: https://github.com/gliscowo/clawclip
 
 environment:

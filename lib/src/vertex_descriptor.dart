@@ -164,9 +164,5 @@ class VertexDescriptor<Vertex> {
   }
 
   static bool _isKnownToMissAttr(GlProgram program, String attr) => !(_missingAttrs[program]?.contains(attr) ?? false);
-
-  static void _markMissingAttr(GlProgram program, String attr) {
-    if (_missingAttrs[program] == null) _missingAttrs[program] = <String>{};
-    _missingAttrs[program]!.add(attr);
-  }
+  static void _markMissingAttr(GlProgram program, String attr) => (_missingAttrs[program] ??= <String>{}).add(attr);
 }

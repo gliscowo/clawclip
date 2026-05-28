@@ -131,6 +131,9 @@ class Window {
         glfwGetWindowPos(_handle, x, y);
         _x = x.value;
         _y = y.value;
+      } else {
+        _x = 0;
+        _y = 0;
       }
 
       glfwGetFramebufferSize(_handle, x, y);
