@@ -1,7 +1,7 @@
-import 'package:clawclip/clawclip.dart';
 import 'package:clawclip_opengl/clawclip_opengl.dart';
 import 'package:vector_math/vector_math.dart' as v32;
 
+import '../clawclip.dart';
 import 'clawclip_logging.dart';
 
 enum VertexAttributePrimitive {

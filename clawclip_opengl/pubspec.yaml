@@ -4,7 +4,6 @@ version: 1.0.0
 repository: https://github.com/gliscowo/clawclip
 
 resolution: workspace
-
 publish_to: https://pub.wispforest.io
 
 environment:

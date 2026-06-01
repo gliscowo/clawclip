@@ -1,5 +1,6 @@
-import 'package:clawclip/src/debug.dart';
 import 'package:logging/logging.dart';
+
+import 'debug.dart';
 
 class GlLoggingConfig {
   final bool Function(GlMessageType type, GlSeverity severity) messageFilter;

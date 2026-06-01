@@ -1,12 +1,13 @@
 import 'dart:async';
 import 'dart:ffi';
 
-import 'package:clawclip/clawclip.dart';
-import 'package:clawclip/src/debug.dart';
 import 'package:clawclip_sdl/clawclip_sdl.dart';
 import 'package:ffi/ffi.dart';
 import 'package:image/image.dart';
 import 'package:vector_math/vector_math.dart';
+
+import '../clawclip.dart';
+import 'debug.dart';
 
 class OpenGLVersion {
   final int major, minor;

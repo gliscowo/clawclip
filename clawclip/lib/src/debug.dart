@@ -1,8 +1,9 @@
 import 'dart:ffi';
 
-import 'package:clawclip/src/clawclip_logging.dart';
 import 'package:clawclip_opengl/clawclip_opengl.dart';
 import 'package:ffi/ffi.dart';
+
+import 'clawclip_logging.dart';
 
 enum GlMessageType {
   marker(glDebugTypeMarker),

@@ -1,11 +1,12 @@
 import 'dart:math';
 
-import 'package:clawclip/clawclip.dart';
-import 'package:clawclip/opengl.dart';
-import 'package:clawclip/sdl.dart';
 import 'package:logging/logging.dart';
 import 'package:test/test.dart';
 import 'package:vector_math/vector_math.dart';
+
+import '../lib/clawclip.dart';
+import '../lib/opengl.dart';
+import '../lib/sdl.dart';
 
 typedef Vertex = ({Vector3 pos, double yOffset, Color color});
 final vertexDescriptor = VertexDescriptor<Vertex>([

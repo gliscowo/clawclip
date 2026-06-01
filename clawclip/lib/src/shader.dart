@@ -2,13 +2,13 @@ import 'dart:async';
 import 'dart:ffi';
 import 'dart:io';
 
-import 'package:clawclip/src/async_gl.dart';
 import 'package:clawclip_opengl/clawclip_opengl.dart';
 import 'package:ffi/ffi.dart';
 import 'package:meta/meta.dart';
 import 'package:path/path.dart';
 import 'package:vector_math/vector_math.dart';
 
+import 'async_gl.dart';
 import 'clawclip_logging.dart';
 
 final _logger = createLogger('shader_compiler');

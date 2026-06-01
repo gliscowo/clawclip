@@ -1,10 +1,10 @@
 import 'dart:ffi';
 import 'dart:typed_data';
 
-import 'package:clawclip/src/byte_array.dart';
 import 'package:clawclip_opengl/clawclip_opengl.dart';
 import 'package:ffi/ffi.dart';
 
+import 'byte_array.dart';
 import 'clawclip_logging.dart';
 import 'shader.dart';
 import 'vertex_descriptor.dart';

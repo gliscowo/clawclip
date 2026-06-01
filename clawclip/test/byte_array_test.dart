@@ -1,5 +1,6 @@
-import 'package:clawclip/src/byte_array.dart';
 import 'package:test/test.dart';
+
+import '../lib/src/byte_array.dart';
 
 void main() {
   test('native byte array alloc and resize', () {

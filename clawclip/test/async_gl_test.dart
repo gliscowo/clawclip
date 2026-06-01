@@ -1,6 +1,7 @@
-import 'package:clawclip/clawclip.dart';
-import 'package:clawclip/sdl.dart';
 import 'package:test/test.dart';
+
+import '../lib/clawclip.dart';
+import '../lib/sdl.dart';
 
 void main() {
   test('GlCall with an without context', () {
