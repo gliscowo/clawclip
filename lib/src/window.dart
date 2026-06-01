@@ -3,31 +3,10 @@ import 'dart:ffi';
 
 import 'package:clawclip/clawclip.dart';
 import 'package:clawclip/src/debug.dart';
-import 'package:dart_glfw/dart_glfw.dart';
+import 'package:clawclip_sdl/clawclip_sdl.dart';
 import 'package:ffi/ffi.dart';
 import 'package:image/image.dart';
 import 'package:vector_math/vector_math.dart';
-
-typedef _GLFWwindowposfun = Void Function(Pointer<GLFWwindow>, Int, Int);
-typedef _GLFWwindowsizefun = Void Function(Pointer<GLFWwindow>, Int, Int);
-typedef _GLFWwindowclosefun = Void Function(Pointer<GLFWwindow>);
-typedef _GLFWwindowrefreshfun = Void Function(Pointer<GLFWwindow>);
-typedef _GLFWwindowfocusfun = Void Function(Pointer<GLFWwindow>, Int);
-typedef _GLFWwindowiconifyfun = Void Function(Pointer<GLFWwindow>, Int);
-typedef _GLFWwindowmaximizefun = Void Function(Pointer<GLFWwindow>, Int);
-typedef _GLFWframebuffersizefun = Void Function(Pointer<GLFWwindow>, Int, Int);
-typedef _GLFWwindowcontentscalefun = Void Function(Pointer<GLFWwindow>, Float, Float);
-
-typedef _GLFWmousebuttonfun = Void Function(Pointer<GLFWwindow>, Int, Int, Int);
-typedef _GLFWcursorposfun = Void Function(Pointer<GLFWwindow>, Double, Double);
-typedef _GLFWcursorenterfun = Void Function(Pointer<GLFWwindow>, Int);
-typedef _GLFWscrollfun = Void Function(Pointer<GLFWwindow>, Double, Double);
-
-typedef _GLFWkeyfun = Void Function(Pointer<GLFWwindow>, Int, Int, Int, Int);
-typedef _GLFWcharfun = Void Function(Pointer<GLFWwindow>, UnsignedInt);
-typedef _GLFWcharmodsfun = Void Function(Pointer<GLFWwindow>, UnsignedInt, Int);
-
-typedef _GLFWdropfun = Void Function(Pointer<GLFWwindow>, Int, Pointer<Pointer<Char>>);
 
 class OpenGLVersion {
   final int major, minor;
@@ -36,15 +15,16 @@ class OpenGLVersion {
   const OpenGLVersion(this.major, this.minor, {this.coreProfile = false});
 }
 
-extension type const WindowFlag._(({int hint, int value}) _value) {
-  const WindowFlag.msaaSamples(int samples) : this._((hint: glfwSamples, value: samples));
-
-  static const startInvisible = WindowFlag._((hint: glfwVisible, value: glfwFalse));
-  static const notResizable = WindowFlag._((hint: glfwResizable, value: glfwFalse));
-  static const floating = WindowFlag._((hint: glfwFloating, value: glfwTrue));
-  static const maximized = WindowFlag._((hint: glfwMaximized, value: glfwTrue));
-  static const transparentFramebuffer = WindowFlag._((hint: glfwTransparentFramebuffer, value: glfwTrue));
-  static const undecorated = WindowFlag._((hint: glfwDecorated, value: glfwFalse));
+extension type const WindowFlag._(({String property, bool value}) _value) {
+  static const startInvisible = WindowFlag._((property: sdlPropWindowCreateHiddenBoolean, value: true));
+  static const notResizable = WindowFlag._((property: sdlPropWindowCreateResizableBoolean, value: false));
+  static const alwaysOnTop = WindowFlag._((property: sdlPropWindowCreateAlwaysOnTopBoolean, value: true));
+  static const maximized = WindowFlag._((property: sdlPropWindowCreateMaximizedBoolean, value: true));
+  static const minimized = WindowFlag._((property: sdlPropWindowCreateMinimizedBoolean, value: true));
+  static const fullscreen = WindowFlag._((property: sdlPropWindowCreateFullscreenBoolean, value: true));
+  static const transparent = WindowFlag._((property: sdlPropWindowCreateTransparentBoolean, value: true));
+  static const utility = WindowFlag._((property: sdlPropWindowCreateUtilityBoolean, value: true));
+  static const undecorated = WindowFlag._((property: sdlPropWindowCreateBorderlessBoolean, value: true));
 }
 
 class Window {
@@ -54,14 +34,16 @@ class Window {
 
   static final Map<int, Window> _knownWindows = {};
 
-  late final Pointer<GLFWwindow> _handle;
+  late final Pointer<SDLWindow> _handle;
+  late final Pointer<SDLGlcontextState> _glContext;
   final StreamController<WindowMoveEvent> _moveListeners = StreamController.broadcast(sync: true);
   final StreamController<WindowResizeEvent> _resizeListeners = StreamController.broadcast(sync: true);
   final StreamController<WindowCloseEvent> _closeListeners = StreamController.broadcast(sync: true);
   final StreamController<WindowRefreshEvent> _refreshListeners = StreamController.broadcast(sync: true);
   final StreamController<WindowFocusEvent> _focusListeners = StreamController.broadcast(sync: true);
-  final StreamController<WindowIconifyEvent> _iconifyListeners = StreamController.broadcast(sync: true);
+  final StreamController<WindowMinimizeEvent> _minimizeListeners = StreamController.broadcast(sync: true);
   final StreamController<WindowMaximizeEvent> _maximizeListeners = StreamController.broadcast(sync: true);
+  final StreamController<WindowRestoreEvent> _restoreListeners = StreamController.broadcast(sync: true);
   final StreamController<FramebufferResizeEvent> _framebufferResizeListeners = StreamController.broadcast(sync: true);
   final StreamController<ContentRescaleEvent> _rescaleListeners = StreamController.broadcast(sync: true);
 
@@ -72,10 +54,10 @@ class Window {
   final StreamController<MouseScrollEvent> _mouseScrollListeners = StreamController.broadcast(sync: true);
 
   final StreamController<KeyInputEvent> _keyInputListeners = StreamController.broadcast(sync: true);
-  final StreamController<CharEvent> _charInputListeners = StreamController.broadcast(sync: true);
-  final StreamController<CharModsEvent> _charModsListeners = StreamController.broadcast(sync: true);
+  final StreamController<TextInputEvent> _textInputListeners = StreamController.broadcast(sync: true);
 
-  final StreamController<FilesDroppedEvent> _dropListeners = StreamController.broadcast(sync: true);
+  final StreamController<FilesDroppedEvent> _fileDropListeners = StreamController.broadcast(sync: true);
+  final StreamController<TextDroppedEvent> _textDropListeners = StreamController.broadcast(sync: true);
 
   final Vector2 _cursorPos = Vector2.zero();
   late int _x;
@@ -88,10 +70,7 @@ class Window {
   String _title;
 
   bool _fullscreen = false;
-  int _restoreX = 0;
-  int _restoreY = 0;
-  int _restoreWidth = 0;
-  int _restoreHeight = 0;
+  int? fullscreenDisplayIdx;
 
   Window(
     int width,
@@ -103,32 +82,54 @@ class Window {
   }) : _title = title,
        _width = width,
        _height = height {
-    glfwDefaultWindowHints();
-    glfwWindowHint(glfwContextVersionMajor, contextVersion.major);
-    glfwWindowHint(glfwContextVersionMinor, contextVersion.minor);
-    glfwWindowHint(glfwOpenglProfile, contextVersion.coreProfile ? glfwOpenglCoreProfile : glfwOpenglCompatProfile);
-
-    if (debug) glfwWindowHint(glfwOpenglDebugContext, glfwTrue);
-    for (final flag in flags) {
-      glfwWindowHint(flag._value.hint, flag._value.value);
-    }
-
     using((arena) {
-      _handle = glfwCreateWindow(width, height, title.toNativeUtf8(allocator: arena).cast(), nullptr, nullptr);
+      final properties = sdlCreateProperties();
+      sdlSetStringProperty(
+        properties,
+        sdlPropWindowCreateTitleString.toNativeUtf8(allocator: arena).cast(),
+        title.toNativeUtf8(allocator: arena).cast(),
+      );
+      sdlSetNumberProperty(properties, sdlPropWindowCreateWidthNumber.toNativeUtf8(allocator: arena).cast(), width);
+      sdlSetNumberProperty(properties, sdlPropWindowCreateHeightNumber.toNativeUtf8(allocator: arena).cast(), height);
+      sdlSetBooleanProperty(properties, sdlPropWindowCreateOpenglBoolean.toNativeUtf8(allocator: arena).cast(), true);
+      sdlSetBooleanProperty(
+        properties,
+        sdlPropWindowCreateResizableBoolean.toNativeUtf8(allocator: arena).cast(),
+        true,
+      );
+
+      for (final flag in flags) {
+        sdlSetBooleanProperty(
+          properties,
+          flag._value.property.toNativeUtf8(allocator: arena).cast(),
+          flag._value.value,
+        );
+      }
+
+      _handle = sdlCreateWindowWithProperties(properties);
 
       if (_handle.address == 0) {
-        final stringPtr = arena<Pointer<Utf8>>();
-        final errorCode = glfwGetError(stringPtr.cast());
+        throw WindowInitializationException(sdlGetError().cast<Utf8>().toDartString());
+      }
 
-        final errorDescription = stringPtr.value.toDartString();
-        throw WindowInitializationException(errorCode, errorDescription);
+      sdlGlSetAttribute(.glContextFlags, debug ? sdlGlContextDebugFlag : 0);
+      sdlGlSetAttribute(.glContextMajorVersion, contextVersion.major);
+      sdlGlSetAttribute(.glContextMinorVersion, contextVersion.minor);
+      sdlGlSetAttribute(
+        .glContextProfileMask,
+        contextVersion.coreProfile ? sdlGlContextProfileCore : sdlGlContextProfileCompatibility,
+      );
+
+      _glContext = sdlGlCreateContext(_handle);
+      if (_glContext == nullptr) {
+        throw WindowInitializationException(sdlGetError().cast<Utf8>().toDartString());
       }
 
       final x = arena<Int>();
       final y = arena<Int>();
 
       if (!_isWayland) {
-        glfwGetWindowPos(_handle, x, y);
+        sdlGetWindowPosition(_handle, x, y);
         _x = x.value;
         _y = y.value;
       } else {
@@ -136,208 +137,254 @@ class Window {
         _y = 0;
       }
 
-      glfwGetFramebufferSize(_handle, x, y);
+      sdlGetWindowSizeInPixels(_handle, x, y);
       _framebufferWidth = x.value;
       _framebufferHeight = y.value;
     });
 
-    _knownWindows[_handle.address] = this;
-    glfwSetWindowPosCallback(_handle, Pointer.fromFunction<_GLFWwindowposfun>(_onMove));
-    glfwSetWindowSizeCallback(_handle, Pointer.fromFunction<_GLFWwindowsizefun>(_onResize));
-    glfwSetWindowCloseCallback(_handle, Pointer.fromFunction<_GLFWwindowclosefun>(_onClose));
-    glfwSetWindowRefreshCallback(_handle, Pointer.fromFunction<_GLFWwindowrefreshfun>(_onRefresh));
-    glfwSetWindowFocusCallback(_handle, Pointer.fromFunction<_GLFWwindowfocusfun>(_onFocus));
-    glfwSetWindowIconifyCallback(_handle, Pointer.fromFunction<_GLFWwindowiconifyfun>(_onIconify));
-    glfwSetWindowMaximizeCallback(_handle, Pointer.fromFunction<_GLFWwindowmaximizefun>(_onMaximize));
-    glfwSetFramebufferSizeCallback(_handle, Pointer.fromFunction<_GLFWframebuffersizefun>(_onFramebufferResize));
-    glfwSetWindowContentScaleCallback(_handle, Pointer.fromFunction<_GLFWwindowcontentscalefun>(_onContentRescale));
-
-    glfwSetMouseButtonCallback(_handle, Pointer.fromFunction<_GLFWmousebuttonfun>(_onMouseButton));
-    glfwSetCursorPosCallback(_handle, Pointer.fromFunction<_GLFWcursorposfun>(_onMousePos));
-    glfwSetCursorEnterCallback(_handle, Pointer.fromFunction<_GLFWcursorenterfun>(_onMouseEnter));
-    glfwSetScrollCallback(_handle, Pointer.fromFunction<_GLFWscrollfun>(_onScroll));
-
-    glfwSetKeyCallback(_handle, Pointer.fromFunction<_GLFWkeyfun>(_onKey));
-    glfwSetCharCallback(_handle, Pointer.fromFunction<_GLFWcharfun>(_onChar));
-    glfwSetCharModsCallback(_handle, Pointer.fromFunction<_GLFWcharmodsfun>(_onCharMods));
-
-    glfwSetDropCallback(_handle, Pointer.fromFunction<_GLFWdropfun>(_onDrop));
+    _knownWindows[sdlGetWindowId(_handle)] = this;
 
     if (clawlipLoggingConfig?.glConfig != null) {
-      activateContext();
       attachGlErrorCallbackToContext();
-      Window.dropContext();
     }
+
+    dropContext();
   }
 
-  static void _onMove(Pointer<GLFWwindow> handle, int x, int y) {
-    if (!_knownWindows.containsKey(handle.address)) return;
-    final window = _knownWindows[handle.address]!;
+  static void _onMove(SDLWindowEvent event) {
+    if (!_knownWindows.containsKey(event.windowID)) return;
+    final window = _knownWindows[event.windowID]!;
 
-    final deltaX = x - window._x, deltaY = y - window._y;
+    final deltaX = event.data1 - window._x, deltaY = event.data2 - window._y;
     if (deltaX != 0 || deltaY != 0) {
-      window._moveListeners.add((x: x, y: y, deltaX: deltaX, deltaY: deltaY));
+      window._moveListeners.add((x: event.data1, y: event.data2, deltaX: deltaX, deltaY: deltaY));
     }
 
-    window._x = x;
-    window._y = y;
+    window._x = event.data1;
+    window._y = event.data2;
   }
 
-  static void _onResize(Pointer<GLFWwindow> handle, int width, int height) {
-    if (!_knownWindows.containsKey(handle.address)) return;
-    final window = _knownWindows[handle.address]!;
+  static void _onResize(SDLWindowEvent event) {
+    if (!_knownWindows.containsKey(event.windowID)) return;
+    final window = _knownWindows[event.windowID]!;
 
-    window._width = width;
-    window._height = height;
+    window._width = event.data1;
+    window._height = event.data2;
 
-    window._resizeListeners.add((newWidth: width, newHeight: height));
+    window._resizeListeners.add((newWidth: event.data1, newHeight: event.data2));
   }
 
-  static void _onClose(Pointer<GLFWwindow> handle) {
-    if (!_knownWindows.containsKey(handle.address)) return;
-    final window = _knownWindows[handle.address]!;
+  static void _onClose(SDLWindowEvent event) {
+    if (!_knownWindows.containsKey(event.windowID)) return;
+    final window = _knownWindows[event.windowID]!;
 
     window._shouldClose = true;
     window._closeListeners.add(const ());
   }
 
-  static void _onRefresh(Pointer<GLFWwindow> handle) {
-    if (!_knownWindows.containsKey(handle.address)) return;
-    final window = _knownWindows[handle.address]!;
+  static void _onRefresh(SDLWindowEvent event) {
+    if (!_knownWindows.containsKey(event.windowID)) return;
+    final window = _knownWindows[event.windowID]!;
 
     window._refreshListeners.add(const ());
   }
 
-  static void _onFocus(Pointer<GLFWwindow> handle, int focus) {
-    if (!_knownWindows.containsKey(handle.address)) return;
-    final window = _knownWindows[handle.address]!;
+  static void _onFocus(SDLWindowEvent event, bool nowFocused) {
+    if (!_knownWindows.containsKey(event.windowID)) return;
+    final window = _knownWindows[event.windowID]!;
 
-    window._focusListeners.add((nowFocused: focus == glfwTrue));
+    window._focusListeners.add((nowFocused: nowFocused));
   }
 
-  static void _onIconify(Pointer<GLFWwindow> handle, int iconify) {
-    if (!_knownWindows.containsKey(handle.address)) return;
-    final window = _knownWindows[handle.address]!;
+  static void _onMinimize(SDLWindowEvent event) {
+    if (!_knownWindows.containsKey(event.windowID)) return;
+    final window = _knownWindows[event.windowID]!;
 
-    window._iconifyListeners.add((nowIconified: iconify == glfwTrue));
+    window._minimizeListeners.add(const ());
   }
 
-  static void _onMaximize(Pointer<GLFWwindow> handle, int maximize) {
-    if (!_knownWindows.containsKey(handle.address)) return;
-    final window = _knownWindows[handle.address]!;
+  static void _onMaximize(SDLWindowEvent event) {
+    if (!_knownWindows.containsKey(event.windowID)) return;
+    final window = _knownWindows[event.windowID]!;
 
-    window._maximizeListeners.add((nowMaximized: maximize == glfwTrue));
+    window._maximizeListeners.add(const ());
   }
 
-  static void _onFramebufferResize(Pointer<GLFWwindow> handle, int width, int height) {
-    if (!_knownWindows.containsKey(handle.address)) return;
-    final window = _knownWindows[handle.address]!;
+  static void _onRestore(SDLWindowEvent event) {
+    if (!_knownWindows.containsKey(event.windowID)) return;
+    final window = _knownWindows[event.windowID]!;
 
-    window._framebufferWidth = width;
-    window._framebufferHeight = height;
-
-    window._framebufferResizeListeners.add((newWidth: width, newHeight: height));
+    window._restoreListeners.add(const ());
   }
 
-  static void _onContentRescale(Pointer<GLFWwindow> handle, double xScale, double yScale) {
-    if (!_knownWindows.containsKey(handle.address)) return;
-    final window = _knownWindows[handle.address]!;
+  static void _onFramebufferResize(SDLWindowEvent event) {
+    if (!_knownWindows.containsKey(event.windowID)) return;
+    final window = _knownWindows[event.windowID]!;
 
-    window._rescaleListeners.add((xScale: xScale, yScale: yScale));
+    window._framebufferWidth = event.data1;
+    window._framebufferHeight = event.data2;
+
+    window._framebufferResizeListeners.add((newWidth: event.data1, newHeight: event.data2));
   }
 
-  static void _onMouseButton(Pointer<GLFWwindow> handle, int button, int action, int mods) {
-    if (!_knownWindows.containsKey(handle.address)) return;
-    final window = _knownWindows[handle.address]!;
+  static void _onContentRescale(SDLWindowEvent event) {
+    if (!_knownWindows.containsKey(event.windowID)) return;
+    final window = _knownWindows[event.windowID]!;
 
-    window._mouseInputListeners.add((button: button, action: action, mods: mods));
+    final scale = sdlGetWindowDisplayScale(window._handle);
+    window._rescaleListeners.add((xScale: scale, yScale: scale));
   }
 
-  static void _onMousePos(Pointer<GLFWwindow> handle, double mouseX, double mouseY) {
-    if (!_knownWindows.containsKey(handle.address)) return;
-    final window = _knownWindows[handle.address]!;
+  static void _onMouseButton(SDLMouseButtonEvent event) {
+    if (!_knownWindows.containsKey(event.windowID)) return;
+    final window = _knownWindows[event.windowID]!;
 
-    final deltaX = mouseX - window._cursorPos.x, deltaY = mouseY - window._cursorPos.y;
+    window._mouseInputListeners.add((button: event.button, down: event.down, mods: KeyModifiers(sdlGetModState())));
+  }
+
+  static void _onMousePos(SDLMouseMotionEvent event) {
+    if (!_knownWindows.containsKey(event.windowID)) return;
+    final window = _knownWindows[event.windowID]!;
+
+    final deltaX = event.x - window._cursorPos.x, deltaY = event.y - window._cursorPos.y;
     if (deltaX != 0 || deltaY != 0) {
-      window._mouseMoveListeners.add((x: mouseX, y: mouseY, dx: deltaX, dy: deltaY));
+      window._mouseMoveListeners.add((x: event.x, y: event.y, dx: deltaX, dy: deltaY));
     }
 
-    window._cursorPos.x = mouseX;
-    window._cursorPos.y = mouseY;
+    window._cursorPos.x = event.x;
+    window._cursorPos.y = event.y;
   }
 
-  static void _onMouseEnter(Pointer<GLFWwindow> handle, int enter) {
-    if (!_knownWindows.containsKey(handle.address)) return;
-    final window = _knownWindows[handle.address]!;
+  static void _onMouseEnter(SDLWindowEvent event, bool enter) {
+    if (!_knownWindows.containsKey(event.windowID)) return;
+    final window = _knownWindows[event.windowID]!;
 
-    (enter == glfwTrue ? window._mouseEnterListeners : window._mouseLeaveListeners).add(const ());
+    (enter ? window._mouseEnterListeners : window._mouseLeaveListeners).add(const ());
   }
 
-  static void _onScroll(Pointer<GLFWwindow> handle, double xOffset, double yOffset) {
-    if (!_knownWindows.containsKey(handle.address)) return;
-    final window = _knownWindows[handle.address]!;
+  static void _onScroll(SDLMouseWheelEvent event) {
+    if (!_knownWindows.containsKey(event.windowID)) return;
+    final window = _knownWindows[event.windowID]!;
 
-    window._mouseScrollListeners.add((xOffset: xOffset, yOffset: yOffset));
+    window._mouseScrollListeners.add((xOffset: event.x, yOffset: event.y));
   }
 
-  static void _onKey(Pointer<GLFWwindow> handle, int key, int scancode, int action, int mods) {
-    if (!_knownWindows.containsKey(handle.address)) return;
-    final window = _knownWindows[handle.address]!;
+  static void _onKey(SDLKeyboardEvent event) {
+    if (!_knownWindows.containsKey(event.windowID)) return;
+    final window = _knownWindows[event.windowID]!;
 
-    window._keyInputListeners.add((key: key, scancode: scancode, action: action, mods: mods));
+    window._keyInputListeners.add((
+      key: event.key,
+      scancode: event.scancode,
+      action: event.down
+          ? event.repeat
+                ? .repeat
+                : .press
+          : .release,
+      mods: KeyModifiers(event.mod),
+    ));
   }
 
-  static void _onChar(Pointer<GLFWwindow> handle, int codepoint) {
-    if (!_knownWindows.containsKey(handle.address)) return;
-    final window = _knownWindows[handle.address]!;
+  static void _onTextInput(SDLTextInputEvent event) {
+    if (!_knownWindows.containsKey(event.windowID)) return;
+    final window = _knownWindows[event.windowID]!;
 
-    window._charInputListeners.add((codepoint: codepoint));
+    window._textInputListeners.add((text: event.text.cast<Utf8>().toDartString()));
   }
 
-  static void _onCharMods(Pointer<GLFWwindow> handle, int codepoint, int mods) {
-    if (!_knownWindows.containsKey(handle.address)) return;
-    final window = _knownWindows[handle.address]!;
+  static List<String>? _dropPathBuffer = [];
+  static void _onFileDrop(SDLDropEvent event) {
+    if (!_knownWindows.containsKey(event.windowID)) return;
+    final window = _knownWindows[event.windowID]!;
 
-    window._charModsListeners.add((codepoint: codepoint, mods: mods));
-  }
-
-  static void _onDrop(Pointer<GLFWwindow> handle, int pathCount, Pointer<Pointer<Char>> nativePaths) {
-    if (!_knownWindows.containsKey(handle.address)) return;
-    final window = _knownWindows[handle.address]!;
-
-    final paths = List.filled(pathCount, '');
-    for (var i = 0; i < pathCount; i++) {
-      paths[i] = nativePaths[i].cast<Utf8>().toDartString();
+    switch (event.type) {
+      case SDLEventType.eventDropBegin:
+        _dropPathBuffer = [];
+      case SDLEventType.eventDropFile:
+        _dropPathBuffer!.add(event.data.cast<Utf8>().toDartString());
+      case SDLEventType.eventDropComplete:
+        window._fileDropListeners.add((paths: _dropPathBuffer!));
+        _dropPathBuffer = null;
     }
-
-    window._dropListeners.add((paths: paths));
   }
 
-  void activateContext() => glfwMakeContextCurrent(_handle);
-  static void dropContext() => glfwMakeContextCurrent(nullptr);
+  static void _onTextDrop(SDLDropEvent event) {
+    if (!_knownWindows.containsKey(event.windowID)) return;
+    final window = _knownWindows[event.windowID]!;
+
+    window._textDropListeners.add((text: event.data.cast<Utf8>().toDartString()));
+  }
+
+  static void pollEvents() => using((arena) {
+    final event = arena<SDLEvent>();
+    while (sdlPollEvent(event)) {
+      final eventRef = event.ref;
+
+      switch (eventRef.type) {
+        case SDLEventType.eventWindowMoved:
+          _onMove(eventRef.window);
+        case SDLEventType.eventWindowResized:
+          _onResize(eventRef.window);
+        case SDLEventType.eventWindowCloseRequested:
+          _onClose(eventRef.window);
+        case SDLEventType.eventWindowExposed:
+          _onRefresh(eventRef.window);
+        case SDLEventType.eventWindowFocusGained:
+          _onFocus(eventRef.window, true);
+        case SDLEventType.eventWindowFocusLost:
+          _onFocus(eventRef.window, false);
+        case SDLEventType.eventWindowMinimized:
+          _onMinimize(eventRef.window);
+        case SDLEventType.eventWindowMaximized:
+          _onMaximize(eventRef.window);
+        case SDLEventType.eventWindowRestored:
+          _onRestore(eventRef.window);
+        case SDLEventType.eventWindowPixelSizeChanged:
+          _onFramebufferResize(eventRef.window);
+        case SDLEventType.eventWindowDisplayScaleChanged:
+          _onContentRescale(eventRef.window);
+        case SDLEventType.eventMouseButtonDown || SDLEventType.eventMouseButtonUp:
+          _onMouseButton(eventRef.button);
+        case SDLEventType.eventMouseMotion:
+          _onMousePos(eventRef.motion);
+        case SDLEventType.eventWindowMouseEnter:
+          _onMouseEnter(eventRef.window, true);
+        case SDLEventType.eventWindowMouseLeave:
+          _onMouseEnter(eventRef.window, false);
+        case SDLEventType.eventMouseWheel:
+          _onScroll(eventRef.wheel);
+        case SDLEventType.eventKeyDown || SDLEventType.eventKeyUp:
+          _onKey(eventRef.key);
+        case SDLEventType.eventTextInput:
+          _onTextInput(eventRef.text);
+        case SDLEventType.eventDropBegin || SDLEventType.eventDropFile || SDLEventType.eventDropComplete:
+          _onFileDrop(eventRef.drop);
+        case SDLEventType.eventDropText:
+          _onTextDrop(eventRef.drop);
+      }
+    }
+  }, malloc);
+
+  void startTextInput() => sdlStartTextInput(_handle);
+  void stopTextInput() => sdlStopTextInput(_handle);
+
+  void activateContext() => sdlGlMakeCurrent(_handle, _glContext);
+  void dropContext() => sdlGlMakeCurrent(_handle, nullptr);
 
   void _enterFullscreen() {
-    _restoreX = _x;
-    _restoreY = _y;
-    _restoreWidth = _width;
-    _restoreHeight = _height;
+    if (fullscreenDisplayIdx != null) {
+      final monitorCount = malloc<Int>();
 
-    final width = malloc<Int>();
-    final height = malloc<Int>();
-    final monitors = malloc<Int>();
+      final displays = sdlGetDisplays(monitorCount);
+      final display = displays[fullscreenDisplayIdx!.clamp(0, monitorCount.value - 1)];
 
-    final monitor = glfwGetMonitors(monitors)[0];
-    glfwGetMonitorWorkarea(monitor, nullptr, nullptr, width, height);
+      sdlSetWindowFullscreenMode(_handle, sdlGetFullscreenDisplayModes(display, nullptr)[0]);
+    }
 
-    glfwSetWindowMonitor(_handle, monitor, 0, 0, width.value, height.value, glfwDontCare);
-
-    malloc.free(width);
-    malloc.free(height);
-    malloc.free(monitors);
+    sdlSetWindowFullscreen(_handle, true);
   }
 
-  void _exitFullscreen() =>
-      glfwSetWindowMonitor(_handle, nullptr, _restoreX, _restoreY, _restoreWidth, _restoreHeight, glfwDontCare);
+  void _exitFullscreen() => sdlSetWindowFullscreen(_handle, false);
 
   bool get fullscreen => _fullscreen;
   set fullscreen(bool value) {
@@ -353,59 +400,54 @@ class Window {
 
     _title = value;
     using((arena) {
-      glfwSetWindowTitle(_handle, title.toNativeUtf8(allocator: arena).cast());
+      sdlSetWindowTitle(_handle, title.toNativeUtf8(allocator: arena).cast());
     });
   }
 
   void setIcon(Image icon) {
-    // since GLFW currently does not support xdg_toplevel_icon we cannot set
-    // the icon there and check this to prevent emitting an error
-    if (_isWayland) {
-      return;
-    }
-
-    var image = malloc<GLFWimage>();
-    image.ref.width = icon.width;
-    image.ref.height = icon.height;
-
     final convertedIcon = icon.convert(format: Format.uint8, numChannels: 4, alpha: 255);
 
     final bufferSize = convertedIcon.width * convertedIcon.height * convertedIcon.numChannels;
-    final glfwBuffer = malloc<Uint8>(bufferSize);
+    final pixelBuffer = malloc<Uint8>(bufferSize);
 
-    glfwBuffer.asTypedList(bufferSize).setRange(0, bufferSize, convertedIcon.data!.buffer.asUint8List());
-    image.ref.pixels = glfwBuffer.cast();
+    pixelBuffer.asTypedList(bufferSize).setRange(0, bufferSize, convertedIcon.data!.buffer.asUint8List());
+    final surface = sdlCreateSurfaceFrom(
+      icon.width,
+      icon.height,
+      .pixelformatRgba32,
+      pixelBuffer.cast(),
+      convertedIcon.rowStride,
+    );
 
-    glfwSetWindowIcon(_handle, 1, image);
-    malloc.free(glfwBuffer);
-    malloc.free(image);
+    sdlSetWindowIcon(_handle, surface);
+    sdlDestroySurface(surface);
   }
 
-  void swapBuffers() => glfwSwapBuffers(_handle);
-  static void pollEvents() => glfwPollEvents();
+  void swapBuffers() => sdlGlSwapWindow(_handle);
 
-  static void enableVsyncInContexct() => glfwSwapInterval(1);
-  static void disableVsyncInContext() => glfwSwapInterval(0);
+  static void enableVsyncInContext() => sdlGlSetSwapInterval(1);
+  static void disableVsyncInContext() => sdlGlSetSwapInterval(0);
 
   void dispose() {
-    glfwDestroyWindow(_handle);
+    sdlGlDestroyContext(_glContext);
+    sdlDestroyWindow(_handle);
     _knownWindows.remove(_handle.address);
   }
 
   double get cursorX => _cursorPos.x;
   set cursorX(double value) {
-    if (_isWayland || value == _cursorPos.x) return;
+    if (value == _cursorPos.x) return;
 
     _cursorPos.x = value;
-    glfwSetCursorPos(_handle, _cursorPos.x, _cursorPos.y);
+    sdlWarpMouseInWindow(_handle, _cursorPos.x, _cursorPos.y);
   }
 
   double get cursorY => _cursorPos.y;
   set cursorY(double value) {
-    if (_isWayland || value == _cursorPos.y) return;
+    if (value == _cursorPos.y) return;
 
     _cursorPos.y = value;
-    glfwSetCursorPos(_handle, _cursorPos.x, _cursorPos.y);
+    sdlWarpMouseInWindow(_handle, _cursorPos.x, _cursorPos.y);
   }
 
   Vector2 get cursorPos => _cursorPos.xy;
@@ -425,15 +467,17 @@ class Window {
 
   bool get shouldClose => _shouldClose;
 
-  Pointer<GLFWwindow> get handle => _handle;
+  Pointer<SDLWindow> get handle => _handle;
+  Pointer<SDLGlcontextState> get glContext => _glContext;
 
   Stream<WindowMoveEvent> get onMove => _moveListeners.stream;
   Stream<WindowResizeEvent> get onResize => _resizeListeners.stream;
   Stream<WindowCloseEvent> get onClose => _closeListeners.stream;
   Stream<WindowRefreshEvent> get onRefresh => _refreshListeners.stream;
   Stream<WindowFocusEvent> get onFocus => _focusListeners.stream;
-  Stream<WindowIconifyEvent> get onIconify => _iconifyListeners.stream;
+  Stream<WindowMinimizeEvent> get onIconify => _minimizeListeners.stream;
   Stream<WindowMaximizeEvent> get onMaximize => _maximizeListeners.stream;
+  Stream<WindowRestoreEvent> get onRestore => _restoreListeners.stream;
   Stream<FramebufferResizeEvent> get onFramebufferResize => _framebufferResizeListeners.stream;
   Stream<ContentRescaleEvent> get onContentRescale => _rescaleListeners.stream;
 
@@ -444,12 +488,26 @@ class Window {
   Stream<MouseScrollEvent> get onMouseScroll => _mouseScrollListeners.stream;
 
   Stream<KeyInputEvent> get onKey => _keyInputListeners.stream;
-  Stream<CharEvent> get onChar => _charInputListeners.stream;
-  Stream<CharModsEvent> get onCharMods => _charModsListeners.stream;
+  Stream<TextInputEvent> get onTextInput => _textInputListeners.stream;
 
-  Stream<FilesDroppedEvent> get onFilesDropped => _dropListeners.stream;
+  Stream<FilesDroppedEvent> get onFilesDropped => _fileDropListeners.stream;
+  Stream<TextDroppedEvent> get onTextDropped => _textDropListeners.stream;
 
-  static final _isWayland = glfwGetPlatform() == glfwPlatformWayland;
+  static final _isWayland = sdlGetCurrentVideoDriver().cast<Utf8>().toDartString() == 'wayland';
+}
+
+extension type const KeyModifiers(int bitMask) {
+  bool get shift => (bitMask & sdlKmodShift) != 0;
+  bool get ctrl => (bitMask & sdlKmodCtrl) != 0;
+  bool get alt => (bitMask & sdlKmodAlt) != 0;
+  bool get meta => (bitMask & sdlKmodGui) != 0;
+  bool get capsLock => (bitMask & sdlKmodCaps) != 0;
+  bool get numLock => (bitMask & sdlKmodNum) != 0;
+
+  static const KeyModifiers none = KeyModifiers(0);
+
+  static bool isModifier(int keyCode) => _modifierKeys.contains(keyCode);
+  static const _modifierKeys = {sdlkLshift, sdlkRshift, sdlkLalt, sdlkRalt, sdlkLgui, sdlkRgui};
 }
 
 typedef WindowMoveEvent = ({int x, int y, int deltaX, int deltaY});
@@ -457,29 +515,31 @@ typedef WindowResizeEvent = ({int newWidth, int newHeight});
 typedef WindowCloseEvent = ();
 typedef WindowRefreshEvent = ();
 typedef WindowFocusEvent = ({bool nowFocused});
-typedef WindowIconifyEvent = ({bool nowIconified});
-typedef WindowMaximizeEvent = ({bool nowMaximized});
+typedef WindowMinimizeEvent = ();
+typedef WindowMaximizeEvent = ();
+typedef WindowRestoreEvent = ();
 typedef FramebufferResizeEvent = ({int newWidth, int newHeight});
 typedef ContentRescaleEvent = ({double xScale, double yScale});
 
-typedef MouseInputEvent = ({int button, int action, int mods});
+typedef MouseInputEvent = ({int button, bool down, KeyModifiers mods});
 typedef MouseMoveEvent = ({double x, double y, double dx, double dy});
 typedef MouseEnterEvent = ();
 typedef MouseLeaveEvent = ();
 typedef MouseScrollEvent = ({double xOffset, double yOffset});
 
-typedef KeyInputEvent = ({int key, int scancode, int action, int mods});
-typedef CharEvent = ({int codepoint});
-typedef CharModsEvent = ({int codepoint, int mods});
+enum KeyAction { press, release, repeat }
+
+typedef KeyInputEvent = ({int key, SDLScancode scancode, KeyAction action, KeyModifiers mods});
+typedef TextInputEvent = ({String text});
 
 typedef FilesDroppedEvent = ({List<String> paths});
+typedef TextDroppedEvent = ({String text});
 
 class WindowInitializationException {
-  final int glfwErrorCode;
-  final String errorDescription;
+  final String error;
 
-  WindowInitializationException(this.glfwErrorCode, this.errorDescription);
+  WindowInitializationException(this.error);
 
   @override
-  String toString() => 'could not create window: $errorDescription (glfw error $glfwErrorCode)';
+  String toString() => 'could not create window: $error';
 }

@@ -11,27 +11,16 @@ class GlLoggingConfig {
   static const severityLowAllTypesNoStacktraces = GlLoggingConfig();
 }
 
-class GlfwLoggingConfig {
-  final bool printStacktraces;
-  const GlfwLoggingConfig({this.printStacktraces = false});
-
-  static const noStacktraces = GlfwLoggingConfig();
-}
-
-typedef ClawclipLoggingConfig = ({Logger? baseLogger, GlLoggingConfig? glConfig, GlfwLoggingConfig? glfwConfig});
+typedef ClawclipLoggingConfig = ({Logger? baseLogger, GlLoggingConfig? glConfig});
 
 // ---
 
 ClawclipLoggingConfig? _loggingConfig;
 ClawclipLoggingConfig? get clawlipLoggingConfig => _loggingConfig;
 
-void clawclipSetupLoggingInIsolate({Logger? baseLogger, GlLoggingConfig? glConfig, GlfwLoggingConfig? glfwConfig}) {
+void clawclipSetupLoggingInIsolate({Logger? baseLogger, GlLoggingConfig? glConfig}) {
   assert(_loggingConfig == null, 'attempted to configure clawclip logging twice');
-  _loggingConfig = (baseLogger: baseLogger, glConfig: glConfig, glfwConfig: glfwConfig);
-
-  if (glfwConfig != null) {
-    attachGlfwErrorCallback();
-  }
+  _loggingConfig = (baseLogger: baseLogger, glConfig: glConfig);
 }
 
 // ---

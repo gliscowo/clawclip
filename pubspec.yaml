@@ -1,7 +1,11 @@
 name: clawclip
-description: A low-level GLFW/OpenGL abstraction for building basic rendering pipelines
-version: 0.1.1
+description: A low-level SDL3/OpenGL abstraction for building basic rendering pipelines
+version: 2.0.0
 repository: https://github.com/gliscowo/clawclip
+
+workspace:
+  - clawclip_opengl
+  - clawclip_sdl
 
 environment:
   sdk: ^3.10.0
@@ -9,12 +13,12 @@ environment:
 publish_to: https://pub.wispforest.io
 
 dependencies:
-  dart_glfw:
+  clawclip_sdl:
     hosted: https://pub.wispforest.io
     version: ^1.0.0
-  dart_opengl:
+  clawclip_opengl:
     hosted: https://pub.wispforest.io
-    version: ^2.0.0
+    version: ^1.0.0
   ffi: ^2.1.2
   image: ^4.5.2
   logging: ^1.2.0

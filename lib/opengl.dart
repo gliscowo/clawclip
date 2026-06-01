@@ -1,1 +1,1 @@
-export 'package:dart_opengl/dart_opengl.dart';
+export 'package:clawclip_opengl/clawclip_opengl.dart';

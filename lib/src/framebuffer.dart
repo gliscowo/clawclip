@@ -1,6 +1,6 @@
 import 'dart:ffi';
 
-import 'package:dart_opengl/dart_opengl.dart';
+import 'package:clawclip_opengl/clawclip_opengl.dart';
 import 'package:ffi/ffi.dart';
 
 import 'color.dart';

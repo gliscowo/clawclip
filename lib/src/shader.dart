@@ -3,7 +3,7 @@ import 'dart:ffi';
 import 'dart:io';
 
 import 'package:clawclip/src/async_gl.dart';
-import 'package:dart_opengl/dart_opengl.dart';
+import 'package:clawclip_opengl/clawclip_opengl.dart';
 import 'package:ffi/ffi.dart';
 import 'package:meta/meta.dart';
 import 'package:path/path.dart';
@@ -44,7 +44,7 @@ class GlShader {
 
   void _loadAndCompile(String sourceName, String source) {
     using((arena) {
-      final sourceBuffer = source.toNativeUtf8();
+      final sourceBuffer = source.toNativeUtf8(allocator: arena);
 
       final sourceArray = arena<Pointer<Utf8>>();
       sourceArray[0] = sourceBuffer;

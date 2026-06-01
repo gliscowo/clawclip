@@ -1,5 +1,5 @@
 import 'package:clawclip/clawclip.dart';
-import 'package:dart_opengl/dart_opengl.dart';
+import 'package:clawclip_opengl/clawclip_opengl.dart';
 import 'package:vector_math/vector_math.dart' as v32;
 
 import 'clawclip_logging.dart';

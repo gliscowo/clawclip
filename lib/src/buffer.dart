@@ -2,7 +2,7 @@ import 'dart:ffi';
 import 'dart:typed_data';
 
 import 'package:clawclip/src/byte_array.dart';
-import 'package:dart_opengl/dart_opengl.dart';
+import 'package:clawclip_opengl/clawclip_opengl.dart';
 import 'package:ffi/ffi.dart';
 
 import 'clawclip_logging.dart';

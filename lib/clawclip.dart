@@ -6,8 +6,7 @@ library;
 export 'src/async_gl.dart';
 export 'src/buffer.dart';
 export 'src/byte_array.dart';
-export 'src/clawclip_logging.dart'
-    show clawclipSetupLoggingInIsolate, clawlipLoggingConfig, GlLoggingConfig, GlfwLoggingConfig;
+export 'src/clawclip_logging.dart' show clawclipSetupLoggingInIsolate, clawlipLoggingConfig, GlLoggingConfig;
 export 'src/color.dart';
 export 'src/debug.dart' show GlMessageType, GlSeverity;
 export 'src/framebuffer.dart';

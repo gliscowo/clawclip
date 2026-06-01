@@ -1,8 +1,7 @@
 import 'dart:ffi';
 
-import 'package:clawclip/glfw.dart';
 import 'package:clawclip/src/clawclip_logging.dart';
-import 'package:dart_opengl/dart_opengl.dart';
+import 'package:clawclip_opengl/clawclip_opengl.dart';
 import 'package:ffi/ffi.dart';
 
 enum GlMessageType {
@@ -58,12 +57,7 @@ void attachGlErrorCallbackToContext() {
   }
 }
 
-void attachGlfwErrorCallback() {
-  glfwSetErrorCallback(Pointer.fromFunction(_onGlfwError));
-}
-
 final _glLogger = createLogger('opengl');
-final _glfwLogger = createLogger('glfw');
 
 void _onGlError(
   int source,
@@ -88,11 +82,4 @@ void _onGlError(
   }
 
   if (clawlipLoggingConfig!.glConfig!.printStacktraces) _glLogger!.warning(StackTrace.current);
-}
-
-void _onGlfwError(int errorCode, Pointer<Char> description) {
-  if (_glfwLogger == null) return;
-
-  _glfwLogger!.severe('GLFW Error: ${description.cast<Utf8>().toDartString()} ($errorCode)');
-  if (clawlipLoggingConfig!.glfwConfig!.printStacktraces) _glfwLogger!.warning(StackTrace.current);
 }

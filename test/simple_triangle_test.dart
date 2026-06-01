@@ -1,8 +1,8 @@
 import 'dart:math';
 
 import 'package:clawclip/clawclip.dart';
-import 'package:clawclip/glfw.dart';
 import 'package:clawclip/opengl.dart';
+import 'package:clawclip/sdl.dart';
 import 'package:logging/logging.dart';
 import 'package:test/test.dart';
 import 'package:vector_math/vector_math.dart';
@@ -46,23 +46,17 @@ void main() {
       print('[${event.loggerName}] (${event.level}) ${event.message}');
     });
 
-    clawclipSetupLoggingInIsolate(
-      baseLogger: Logger('simple_triangle'),
-      glConfig: .severityLowAllTypesNoStacktraces,
-      glfwConfig: .noStacktraces,
-    );
+    clawclipSetupLoggingInIsolate(baseLogger: Logger('simple_triangle'), glConfig: .severityLowAllTypesNoStacktraces);
 
-    glfwInitHint(glfwWaylandLibdecor, glfwWaylandDisableLibdecor);
-
-    glfwInit();
-    final window = Window(800, 600, 'clawclip triangle test', flags: [.transparentFramebuffer, .undecorated]);
+    sdlInit(sdlInitVideo);
+    final window = Window(800, 600, 'clawclip triangle test', flags: [.transparent, .undecorated]);
 
     window.activateContext();
     window.onFramebufferResize.listen((event) {
       gl.viewport(0, 0, event.newWidth, event.newHeight);
     });
 
-    glfwSwapInterval(0);
+    Window.disableVsyncInContext();
 
     final vertexShader = GlShader('vertexShaderSource', vertexShaderSource, .vertex);
     final fragmentShader = GlShader('fragmentShaderSource', fragmentShaderSource, .fragment);
@@ -76,16 +70,18 @@ void main() {
       gl.clearColor(1, 1, 1, 0);
       gl.clear(glColorBufferBit);
 
-      final color1 = Color.ofHsv((glfwGetTime() / 15) % 1, .75, 1);
-      final color2 = Color.ofHsv((glfwGetTime() / 10) % 1, .75, 1);
-      final color3 = Color.ofHsv((glfwGetTime() / 5) % 1, .75, 1);
+      final time = DateTime.now().millisecondsSinceEpoch / 1000;
+
+      final color1 = Color.ofHsv((time / 15) % 1, .75, 1);
+      final color2 = Color.ofHsv((time / 10) % 1, .75, 1);
+      final color3 = Color.ofHsv((time / 5) % 1, .75, 1);
 
       mesh
         ..clear()
         ..writeVertices([
-          (pos: Vector3(0, .5, 0), yOffset: sin(glfwGetTime()) * .2, color: color1),
-          (pos: Vector3(-.5, -.5, 0), yOffset: sin(glfwGetTime() * 4) * .05, color: color2),
-          (pos: Vector3(.5, -.5, 0), yOffset: sin(glfwGetTime() * 8) * .05, color: color3),
+          (pos: Vector3(0, .5, 0), yOffset: sin(time) * .2, color: color1),
+          (pos: Vector3(-.5, -.5, 0), yOffset: sin(time * 4) * .05, color: color2),
+          (pos: Vector3(.5, -.5, 0), yOffset: sin(time * 8) * .05, color: color3),
         ])
         ..upload(usage: .dynamicDraw)
         ..draw();

@@ -1,6 +1,6 @@
 import 'dart:ffi';
 
-import 'package:dart_glfw/dart_glfw.dart';
+import 'package:clawclip_sdl/clawclip_sdl.dart';
 
 /// A function which requires an active OpenGL context
 /// in order to run. In debug builds, this precondition
@@ -15,7 +15,7 @@ import 'package:dart_glfw/dart_glfw.dart';
 extension type const GlCall<T>(T Function() _fn) {
   @pragma('vm:prefer-inline')
   T call() {
-    assert(glfwGetCurrentContext() != nullptr, 'an OpenGL context must be active to invoke a GlCall');
+    assert(sdlGlGetCurrentContext() != nullptr, 'an OpenGL context must be active to invoke a GlCall');
     return _fn();
   }
 

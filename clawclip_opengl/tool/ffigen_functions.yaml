@@ -1,0 +1,19 @@
+output: '../lib/src/gl_functions.dart'
+headers:
+  entry-points: 
+    - 'glext.h'
+
+comments:
+  length: brief
+
+exclude-all-by-default: true
+functions:
+  include:
+    - 'gl.*'
+
+structs:
+  rename:
+    '_+(.*)': '$1'
+
+name: 'GL'
+description: 'Bindings for the OpenGL 1.0+ Compatibility Profile API'
